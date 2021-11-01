@@ -59,4 +59,35 @@ fs.readdir('./src/cmd', (err, files) =>{
 });
 
 
+/* -- Comand reloading --  */
+
+client.reload = command => {
+    return new Promise((resolve, reject) =>{
+        try{
+            // Deleting the cached command
+            delete require.cache[require.resolve(`./src/cmd/${command}`)];
+            // Defining the command
+            const cmd = require(`./src/cmd/${command}`);
+            // Deleting the command from the commands collection
+            client.commands.delete(command);
+            client.aliases.forEach((cmd, alias) =>{
+                // Checking if the command is correct and deleting the aliases
+                if (cmd === command) client.aliases.delete(alias);
+            });
+            // Setting the command and aliases again
+            client.commands.set(command, cmd);
+            cmd.conf.aliases.forEach(alias =>{
+                client.aliases.set(alias, cmd.help.name);
+            });
+            resolve();
+        } catch(e){
+            // Logging any error that may happen while reloading and rejecting the promise
+            logger.error(e);
+            reject(e);
+        }
+    });
+};
+
+
+
 client.login(config.token);
