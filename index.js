@@ -9,13 +9,14 @@
 */
 
 /* Dependencies */
-const Discord = require('discord.js');
+const {Client, Intents} = require('discord.js');
+const Discord = require('discord.js')
 const logger = require('./src/funcs/logger.js');
 const os = require('os');
 const fs = require('fs');
 
 /* Declaring client and configuration file. */
-const client = new Discord.Client();
+const client = new Client({intents: [Intents.FLAGS.GUILDS]});
 const config = require('./config.json');
 
 /* Declaring misc */
