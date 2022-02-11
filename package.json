@@ -1,7 +1,7 @@
 {
-  "name": "shuffle",
+  "name": "minerbot",
   "version": "0.0.1",
-  "description": "Shuffle is a framework for discord bots",
+  "description": "Bot to check mining status, built on the shuffle framework.",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
