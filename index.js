@@ -1,7 +1,8 @@
 // Declaring important stuff
-const { Client, Events, GatewayIntentBits } = require('discord.js');
+const { Client, Events, GatewayIntentBits, Collection } = require('discord.js');
 const path = require('path');
 const fs = require('fs');
+const logger = require('./src/funcs/logger')
 require('dotenv').config();
 
 const client = new Client({ 
@@ -9,6 +10,8 @@ const client = new Client({
         GatewayIntentBits.Guilds
     ] 
 });
+
+client.commands = new Collection();
 
 // Event Handler
 
@@ -25,5 +28,20 @@ for (const file of eventFiles) {
     }
 }
 
+// Command handler
+
+const commandsPath = path.join(__dirname, 'src/commands');
+const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));
+
+for (const file of commandFiles) {
+    const filePath = path.join(commandsPath, file);
+    const command = require(filePath);
+
+    if ('data' in command && 'execute' in command) {
+        client.commands.set(command.data.name, command);
+    } else {
+        logger.error(`The command at ${filePath} is missing a required 'data' or 'execute' property.`)
+    }
+}
 
 client.login(process.env.TOKEN);
