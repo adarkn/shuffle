@@ -1,4 +1,7 @@
 # shuffle
+
+# THIS FRAMEWORK ISN'T MANTAINED AND CODE IS REALLY BAD.
+
 Shuffle is a framework for discord bots
 
 
