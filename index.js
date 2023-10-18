@@ -1,93 +1,47 @@
-/*
-   _____ _            __  __ _      
-  / ____| |          / _|/ _| |     
- | (___ | |__  _   _| |_| |_| | ___ 
-  \___ \| '_ \| | | |  _|  _| |/ _ \
-  ____) | | | | |_| | | | | | |  __/
- |_____/|_| |_|\__,_|_| |_| |_|\___|
-    A modular discord.js framework                    
-*/
-
-/* Dependencies */
-const {Client, Intents} = require('discord.js');
-const Discord = require('discord.js')
-const logger = require('./src/funcs/logger.js');
-const os = require('os');
+// Declaring important stuff
+const { Client, Events, GatewayIntentBits, Collection } = require('discord.js');
+const path = require('path');
 const fs = require('fs');
+const logger = require('./src/funcs/logger')
+require('dotenv').config();
 
-/* Declaring client and configuration file. */
-const client = new Client({intents: [Intents.FLAGS.GUILDS]});
-const config = require('./config.json');
-
-/* Declaring misc */
-const GB = 1 / (Math.pow(1024, 3));
-var totalRam = (os.totalmem() * GB).toFixed(2);
-var freeRam = (os.freemem() * GB).toFixed(2);
-
-require('./src/funcs/eventHandler.js')(client);
-
-logger.info('Shuffle process started, connecting to discord...');
-process.title = `Shuffle Framework | ${freeRam} GB / ${totalRam} GB | Connecting to discord`
-
-
-/* -- Command handler -- */
-
-/* Creating the commands and aliases collection */
-
-client.commands = new Discord.Collection();
-client.aliases = new Discord.Collection();
-
-/* Using fs to read the cmd directory and looks for commands */
-
-fs.readdir('./src/cmd', (err, files) =>{
-
-    /* If we find an error, log it */
-    if (err) logger.error(err);
-
-    /* Logging the number of commands located in ./src/cmd */
-    logger.info(`Found a total of ${files.length} commands, loading them...`);
-
-    /* Loading each command on the files array */
-    files.forEach(f => {
-        const props = require(`./src/cmd/${f}`);
-        logger.misc(`Loading command: ${props.help.name}`);
-        client.commands.set(props.help.name, props);
-        props.conf.aliases.forEach(alias => {
-            client.aliases.set(alias, props.help.name);
-        });
-    });
+const client = new Client({ 
+    intents: [
+        GatewayIntentBits.Guilds
+    ] 
 });
 
+client.commands = new Collection();
 
-/* -- Comand reloading --  */
+// Event Handler
 
-client.reload = command => {
-    return new Promise((resolve, reject) =>{
-        try{
-            // Deleting the cached command
-            delete require.cache[require.resolve(`./src/cmd/${command}`)];
-            // Defining the command
-            const cmd = require(`./src/cmd/${command}`);
-            // Deleting the command from the commands collection
-            client.commands.delete(command);
-            client.aliases.forEach((cmd, alias) =>{
-                // Checking if the command is correct and deleting the aliases
-                if (cmd === command) client.aliases.delete(alias);
-            });
-            // Setting the command and aliases again
-            client.commands.set(command, cmd);
-            cmd.conf.aliases.forEach(alias =>{
-                client.aliases.set(alias, cmd.help.name);
-            });
-            resolve();
-        } catch(e){
-            // Logging any error that may happen while reloading and rejecting the promise
-            logger.error(e);
-            reject(e);
-        }
-    });
-};
+const eventsPath = path.join(__dirname, '/src/events');
+const eventFiles = fs.readdirSync(eventsPath).filter(file => file.endsWith('.js'));
 
+for (const file of eventFiles) {
+    const filePath = path.join(eventsPath, file);
+    const event = require(filePath);
+    if (event.once) {
+        client.once(event.name, (...args) => event.execute(...args));
+    } else {
+        client.on(event.name, (...args) => event.execute(...args));
+    }
+}
 
+// Command handler
 
-client.login(config.token);
+const commandsPath = path.join(__dirname, 'src/commands');
+const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));
+
+for (const file of commandFiles) {
+    const filePath = path.join(commandsPath, file);
+    const command = require(filePath);
+
+    if ('data' in command && 'execute' in command) {
+        client.commands.set(command.data.name, command);
+    } else {
+        logger.error(`The command at ${filePath} is missing a required 'data' or 'execute' property.`)
+    }
+}
+
+client.login(process.env.TOKEN);
